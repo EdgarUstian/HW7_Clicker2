@@ -9,7 +9,7 @@ object Database {
 
   val url = "jdbc:mysql://localhost/mysql?serverTimezone=UTC"
   val username = "root"
-  val password = "12345678"
+  val password = "Jakesalli2012*s"
   var connection: Connection = DriverManager.getConnection(url, username, password)
 
   /*

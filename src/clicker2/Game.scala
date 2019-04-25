@@ -7,7 +7,7 @@ class Game(username: String) {
 
   var gold: Double = 0.0
   var lastUpdateTime: Long = System.nanoTime()
-  var equipment: Map[String, Equipment] = Map("shovel" -> new Shovels, "excavator" -> new Excavators, "mine" -> new GoldMines)
+  var equipment: Map[String, Equipment] = Map("shovel" -> new Shovels, "excavator" -> new Excavators, "mine" -> new GoldMines, "alchemy" -> new Alchemy)
 
   def goldPerSecond(): Double = {
     var gps = 0.0

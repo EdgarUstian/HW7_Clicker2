@@ -101,4 +101,5 @@ def static_files(filename):
     return send_from_directory('static', filename)
 
 
+print("Listening on port: 8080")
 socket_server.run(app, port=8080)

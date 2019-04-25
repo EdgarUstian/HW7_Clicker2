@@ -1,7 +1,11 @@
 package clicker2.networking
 
-import akka.actor.{Actor, ActorSystem, Props}
+import java.net.InetSocketAddress
 
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
+import akka.io.{IO, Tcp}
+import akka.util.ByteString
+import play.api.libs.json.Json
 
 case object UpdateGames
 
@@ -11,17 +15,57 @@ case class GameState(gameState: String)
 
 class ClickerServer extends Actor {
 
-  override def receive: Receive = {
+  import Tcp._
+  import context.system
 
-//    Example of adding an actor with this actor as its supervisor
-//    Note that we use the context of this actor and do not create a new actor system
-//    val childActor = context.actorOf(Props(classOf[GameActor], username))
+  IO(Tcp) ! Bind(self, new InetSocketAddress("localhost", 8000))
+
+  var temporaryActor: ActorRef = _
+  var users: Map[String, ActorRef] = Map()
+  var clients: Set[ActorRef] = Set()
+
+  override def receive: Receive = {
+    case b: Bound => println("Listening on port: " + b.localAddress.getPort)
+    case c: Connected =>
+      println("Client Connected: " + c.remoteAddress)
+      this.clients = this.clients + sender()
+      temporaryActor = sender()
+      temporaryActor ! Register(self)
+    case PeerClosed =>
+      println("Client Disconnected: " + sender())
+      this.clients = this.clients - sender()
+    case r: Received =>
+      val user = (Json.parse(r.data.utf8String) \ "username").as[String]
+      val action = (Json.parse(r.data.utf8String) \ "action").as[String]
+      if (action == "connected") {
+        sender() ! Register(self)
+        val actor = context.actorOf(Props(classOf[GameActor], user))
+        users = users + (user -> actor)
+        actor ! Setup
+      }
+      if (action == "disconnected"){
+        users(user) ! PoisonPill
+        users = users - user
+      }
+      if (action == "clickGold") {
+        users(user) ! ClickGold
+      }
+      if (action == "buyEquipment"){
+        users(user) ! BuyEquipment((Json.parse(r.data.utf8String) \ "equipmentID").as[String])
+      }
 
 
     case UpdateGames =>
+      for ((user, actor) <- users){
+        actor ! Update
+      }
     case AutoSave =>
+      for ((user, actor) <- users){
+        actor ! Save
+      }
     case gs: GameState =>
       val delimiter = "~"
+      this.temporaryActor ! Write(ByteString(gs.gameState + delimiter))
   }
 
 }

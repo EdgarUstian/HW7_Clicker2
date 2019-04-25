@@ -1,6 +1,7 @@
 package clicker2.networking
 
 import akka.actor.Actor
+import akka.io.Tcp.Register
 import clicker2.Game
 
 case object Update
@@ -19,16 +20,22 @@ class GameActor(username: String) extends Actor {
 
   override def receive: Receive = {
     case Setup =>
+      sender() ! Register(self)
       Database.setupTable()
       if (!Database.playerExists(username)){
+//        println("PlayerNew")
         Database.createPlayer(username)
+//        println("NewDatabase")
       }
       else {
         Database.loadGame(username, game)
+//        println("PlayerExisting")
       }
     case Update =>
       game.update(System.nanoTime())
+      println("TimeUpdate")
       sender() ! GameState(game.toJSON())
+      println("JSONUpdate")
     case Save => Database.saveGame(
       username,
       game.gold,
@@ -36,7 +43,12 @@ class GameActor(username: String) extends Actor {
       game.equipment("excavator").numberOwned,
       game.equipment("mine").numberOwned,
       game.lastUpdateTime)
-    case ClickGold => game.clickGold()
-    case buy: BuyEquipment => game.buyEquipment(buy.equipmentID)
+//      println("ValuesSave")
+    case ClickGold =>
+      game.clickGold()
+//      println("ClickGold")
+    case buy: BuyEquipment =>
+      game.buyEquipment(buy.equipmentID)
+//      println("Buy", buy.equipmentID)
   }
 }
